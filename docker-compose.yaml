@@ -6,10 +6,9 @@ services:
     env_file:
       - .env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-      PYTHONPATH: "/app"
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -20,6 +19,16 @@ services:
       timeout: 3s
       retries: 3
 
+  init_db:
+    build:
+      context: .
+      dockerfile: Dockerfile_initdb
+    env_file:
+      - ./.env
+    depends_on:
+      db:
+        condition: service_healthy
+    
   bot:
     build: .
     env_file:
@@ -30,13 +39,8 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
-      - PYTHONPATH="/app"
-
     depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - .:/app
+      - init_db
 
 volumes:
   postgres_data:
