@@ -2,7 +2,7 @@ from aiogram import Router, types
 from aiogram.types import Message, ChatMemberUpdated
 from aiogram.filters import Command
 import emoji
-from functions_bot import make_row_keyboard
+from services.formatters import make_row_keyboard
 
 router = Router()
 

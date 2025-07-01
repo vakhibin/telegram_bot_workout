@@ -1,10 +1,16 @@
-FROM python:3.13.1
+FROM python:3.11
 
-WORKDIR /app
+WORKDIR /telegram_bot
 
-COPY app/requirements.txt /app
-RUN pip install -r requirements.txt
+COPY . .
 
-COPY app/ .
+RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["python", "Bot.py"]
+WORKDIR /telegram_bot/app
+
+ENV PYTHONPATH=/telegram_bot
+
+RUN chmod +x entrypoint.sh
+
+ENTRYPOINT ["bash", "./entrypoint.sh"]
+
