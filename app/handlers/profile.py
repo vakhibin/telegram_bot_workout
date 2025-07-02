@@ -256,14 +256,28 @@ async def process_calories_goal(message: Message, state: FSMContext):
     }
 
     async with get_db() as session:
-        # Деактивируем все профили пользователя
-        await session.execute(
-            update(User)
-            .where(User.telegram_id == message.from_user.id)
-            .values(is_active=False)
-        )
-        # Создаем новый профиль
-        await create_user(session, user_data)
+        # Проверяем, существует ли уже пользователь с таким telegram_id
+        existing_user = await get_user_by_telegram_id(session, message.from_user.id)
+
+        if existing_user:
+            # Обновляем существующего пользователя
+            await session.execute(
+                update(User)
+                .where(User.telegram_id == message.from_user.id)
+                .values(**user_data)
+            )
+            await session.commit()
+            await message.reply(f"Профиль успешно обновлен {emoji.emojize(':heavy_check_mark:', language='alias')}")
+        else:
+            # Создаем нового пользователя, если он не существует
+            # Деактивируем все профили пользователя
+            await session.execute(
+                update(User)
+                .where(User.telegram_id == message.from_user.id)
+                .values(is_active=False)
+            )
+            await create_user(session, user_data)
+            await message.reply(f"Профиль успешно создан {emoji.emojize(':heavy_check_mark:', language='alias')}")
 
     await message.reply(f"Профиль успешно создан {emoji.emojize(':heavy_check_mark:', language='alias')}")
     await state.clear()
@@ -301,7 +315,7 @@ async def process_water(message: Message, state: FSMContext):
             select(WaterLog.volume)
             .where(WaterLog.user_id == user.id)
         )
-        total_water = sum(log[0] for log in water_logs.scalars().all())
+        total_water = sum(log for log in water_logs.scalars().all())
 
         response = (
             f"Добавлено: {volume} мл воды\n"
@@ -331,8 +345,7 @@ async def process_food_name(message: Message, state: FSMContext):
 
     if not calories_per_100g:
         await message.reply(
-            "Не удалось найти информацию о продукте. "
-            "Попробуйте указать название на английском."
+            "Не удалось найти информацию о продукте."
         )
         await state.clear()
         return
@@ -372,7 +385,7 @@ async def process_food_weight(message: Message, state: FSMContext):
             select(FoodLog.calories)
             .where(FoodLog.user_id == user.id)
         )
-        total_calories = sum(log[0] for log in food_logs.scalars().all())
+        total_calories = sum(log for log in food_logs.scalars().all())
 
         response = (
             f"Добавлено: {data['food_name']} - {weight}г ({calories:.1f} ккал)\n"
@@ -443,7 +456,7 @@ async def process_workout_time(message: Message, state: FSMContext):
             select(WorkoutLog.calories_burnt)
             .where(WorkoutLog.user_id == user.id)
         )
-        total_calories_burnt = sum(log[0] for log in workout_logs.scalars().all())
+        total_calories_burnt = sum(log for log in workout_logs.scalars().all())
 
         response = (
             f"Добавлено: {data['workout_name']} - {minutes} мин ({calories_burnt:.1f} ккал)\n"
@@ -467,19 +480,19 @@ async def see_progress(message: Message):
             select(WaterLog.volume)
             .where(WaterLog.user_id == user.id)
         )
-        total_water = sum(log[0] for log in water_logs.scalars().all())
+        total_water = sum(log for log in water_logs.scalars().all())
 
         food_logs = await session.execute(
             select(FoodLog.calories)
             .where(FoodLog.user_id == user.id)
         )
-        total_calories = sum(log[0] for log in food_logs.scalars().all())
+        total_calories = sum(log for log in food_logs.scalars().all())
 
         workout_logs = await session.execute(
             select(WorkoutLog.calories_burnt)
             .where(WorkoutLog.user_id == user.id)
         )
-        total_workout = sum(log[0] for log in workout_logs.scalars().all())
+        total_workout = sum(log for log in workout_logs.scalars().all())
 
         response = (
             f"Текущий прогресс {emoji.emojize(':bar_chart:', language='alias')}:\n"
@@ -620,7 +633,7 @@ async def progress_graph(message: Message):
             .where(FoodLog.user_id == user.id)
             .order_by(FoodLog.logged_at)
         )
-        calories_history = [log[0] for log in food_logs.scalars().all()]
+        calories_history = [log for log in food_logs.scalars().all()]
 
         # Получаем историю воды
         water_logs = await session.execute(
@@ -628,7 +641,7 @@ async def progress_graph(message: Message):
             .where(WaterLog.user_id == user.id)
             .order_by(WaterLog.logged_at)
         )
-        water_history = [log[0] for log in water_logs.scalars().all()]
+        water_history = [log for log in water_logs.scalars().all()]
 
         if not calories_history and not water_history:
             await message.reply("Недостаточно данных для построения графика")
